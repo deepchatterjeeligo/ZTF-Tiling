@@ -3,6 +3,7 @@
 #################################################
 import numpy as np
 import pandas as pd
+from os import path
 
 def removeTileFromSkymap(skymap, tile_content, \
                                 return_flag=True, tol=0.05):
@@ -75,3 +76,19 @@ def removeTileFromSkymapv2(skymap, tile_content, \
     pval_new    = pval[net_mask]
     
     return [ra_new, dec_new, pval_new]
+
+def skymapToFits(skymap, filename): #FIXME: add header information later
+    '''
+    Function	:: Pack the skymap into a fits file using astropy fits
+    
+    skymap	:: Skymap in the form of [ra, dec, pvals]
+
+    filename	:: Output filename. Intermediate directories are created
+    '''
+    from astropy.io import fits
+    if path.dirname(filename) and not path.exists(path.dirname(filename)):
+        os.makedirs(path.dirname(filename))
+    hdu		= fits.primaryHDU(skymap)
+    hdulist 	= fits.HDUList([hdu])
+    
+    hdulist.writeto(filename)
