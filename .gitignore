@@ -1,4 +1,17 @@
+# ipython checkpoints
 *.ipynb_checkpoints
+
+# vim backups
 *.swp
-priority.csv
+
+# csv created for seeing the data 
+*.csv
+
+# compiled stuff
 *.pyc
+
+# more backups
+*~
+
+# npy data files
+*.npy

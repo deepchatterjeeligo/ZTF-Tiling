@@ -9,7 +9,7 @@ import pickle
 
 from astropy.utils.console import ProgressBar
 
-import getFermiSkyMap
+#import getFermiSkyMap
 
 
 
@@ -101,22 +101,29 @@ class RankedTileGenerator:
 			   needs a config file that specifies the web address of the fits, the year 
 			   of the GRB and the path to the ZTF tiles file
 	'''
+	__allowed_catalogs__ = [
+	        'GLADE',
+	        'CLU'
+	        'GWGC'
+	]
+	
 	def __init__(self, configDict, skymap):
 # 		config = configparser.ConfigParser()
 # 		config.read(configfile)
 # 		self.webaddress = config.get('Paths', 'webaddress')
 # 		self.year = config.get('Paths', 'year')
 		tileFile = configDict['tileFile']
+		# tile and ra, dec association
+		self.tile_pixel_assoc = {}
+		# the skymap supplied as numpy array
 		self.skymap = skymap
 		if 'catalog' in configDict.keys():
 			self.galaxy_catalog = configDict['catalog']
 			
 			if self.galaxy_catalog:
-				assert ((self.galaxy_catalog=='GLADE') or (self.galaxy_catalog=='CLU')\
-					   or (self.galaxy_catalog=='GWGC')), "Currently only allowed galaxy catalogs are 'GLADE', 'CLU' and 'GWGC' "
-# 			except AssertionError:
-# 				print("Currently only allowed galaxy catalogs are 'GLADE', 'CLU' and 'GWGC' ")
-# 				sys.exit(0)
+			    assert self.galaxy_catalog in RankedTileGenerator.__allowed_catalogs__, \
+			    "Currently only allowed galaxy catalogs are GLADE, CLU and GWGC"
+
 		self.tileData = pd.DataFrame(np.recfromtxt(tileFile, names=True))
 
 		### Output directories ###
@@ -279,15 +286,21 @@ class RankedTileGenerator:
 
 					
 						pvalTile.append(np.sum(pVal_intile[insideCCDs_thisTile]))
-						self.RATile = ra_intile[insideCCDs_thisTile]
-						self.DecTile = dec_intile[insideCCDs_thisTile]
-						self.PVals = pVal_intile[insideCCDs_thisTile]
+						RATile = ra_intile[insideCCDs_thisTile]
+						DecTile = dec_intile[insideCCDs_thisTile]
+						PVals = pVal_intile[insideCCDs_thisTile]
 
 					else: ## multiCCD if-block
-						self.RATile = ra_intile
-						self.DecTile = dec_intile
-						self.PVals = pVal_intile
-						pvalTile.append(np.sum(self.PVals))
+						RATile = ra_intile
+						DecTile = dec_intile
+						PVals = pVal_intile
+						pvalTile.append(np.sum(PVals))
+					# update the tile_pixel_assoc
+					self.tile_pixel_assoc[str(row['ID'])] = [
+					                                            RATile,
+					                                            DecTile,
+					                                            PVals
+					                                        ]
 
 				else:
 					pvalTile.append(0)
@@ -310,16 +323,16 @@ class RankedTileGenerator:
 				self.galaxies_inThisTile.append(self.getGalaxiesInTile(tileID))
 			return [self.tileData, self.galaxies_inThisTile]
 		try:
-			os.system('mkdir -p ' + self.rankedTilesDir)
-			try:
-				ranked_tiles_filename = fitsfilename.split('.fit')[0] + '.xlsx'
+			os.makedirs(self.rankedTilesDir)
+		except:
+			print('Error creating target location, skipping writing...')
+		else:
+		    try:
+		        ranked_tiles_filename = fitsfilename.split('.fit')[0] + '.xlsx'
 				self.tileData.to_excel(os.path.join(self.rankedTilesDir, ranked_tiles_filename))
 			except:
 				ranked_tiles_filename = fitsfilename.split('.fit')[0] + '.csv'
 				self.tileData.to_csv(os.path.join(self.rankedTilesDir, ranked_tiles_filename))
-
-		except:
-			print('Could not write ranked tile generation file into location')
 		return self.tileData
 
 		
